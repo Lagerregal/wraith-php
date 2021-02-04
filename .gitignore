@@ -2,5 +2,6 @@
 
 /configs/*
 !/configs/example.yml
+!/configs/example.paths.yml
 /data
 /vendor

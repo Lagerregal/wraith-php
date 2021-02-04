@@ -1,4 +1,8 @@
 {
+	"name": "different-technology/wraith-php",
+	"description": "PHP Wraith is a screenshot comparison tool using Selenium - written in PHP.",
+	"type": "library",
+	"license": "MIT",
 	"autoload": {
 		"psr-4": {
 			"WraithPhp\\": "src/"
@@ -11,4 +15,5 @@
 		"php-webdriver/webdriver": "^1.9",
 		"symfony/yaml": "^5.2"
 	}
+
 }

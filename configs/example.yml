@@ -1,17 +1,26 @@
+# Resolutions for screenshots
 resolutions:
   - 320x1000
-  #  - 600x1000
+#  - 600x1000
   - 768x2000
   - 1024x2000
-  #  - 1280x2000
+#  - 1280x2000
   - 1920x2500
 
+# Domain without trailing slash
 domain: 'https://piano-hoelzle.de'
 
+# CSS selector to hide cookie banner on first page hit (optional)
 cookie_banner_button: 'a.hide-cookie-hint'
 
-paths:
-  - '/'
-  - '/klaviere-stuttgart'
-  - '/service/klavierstimmer-stuttgart'
-  - '/unternehmen/referenzen'
+# Add new links within the same domain to the paths (optional)
+crawl_domain_for_new_paths: true
+
+include_paths:
+  starts_with:
+    - '/service/'
+exclude_paths:
+  ends_with:
+    - .png
+    - .jpg
+    - .pdf
