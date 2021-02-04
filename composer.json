@@ -1,0 +1,14 @@
+{
+	"autoload": {
+		"psr-4": {
+			"WraithPhp\\": "src/"
+		}
+	},
+	"require": {
+		"php": "^7.4",
+		"ext-json": "*",
+		"ext-imagick": "*",
+		"php-webdriver/webdriver": "^1.9",
+		"symfony/yaml": "^5.2"
+	}
+}

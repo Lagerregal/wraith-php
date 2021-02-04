@@ -1,0 +1,17 @@
+resolutions:
+  - 320x1000
+  #  - 600x1000
+  - 768x2000
+  - 1024x2000
+  #  - 1280x2000
+  - 1920x2500
+
+domain: 'https://piano-hoelzle.de'
+
+cookie_banner_button: 'a.hide-cookie-hint'
+
+paths:
+  - '/'
+  - '/klaviere-stuttgart'
+  - '/service/klavierstimmer-stuttgart'
+  - '/unternehmen/referenzen'

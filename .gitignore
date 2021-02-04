@@ -1,0 +1,6 @@
+/.idea
+
+/configs/*
+!/configs/example.yml
+/data
+/vendor
