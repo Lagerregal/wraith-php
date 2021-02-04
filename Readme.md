@@ -87,3 +87,7 @@ php app.php compare {{your-config-name}} {{directory1}} {{directory2}}
 ```bash
 php app.php compare example 2021-02-04_00-05-35 2021-02-04_00-38-37
 ```
+
+### Show results
+
+Open this file in your browser to see the results: `public/index.html`

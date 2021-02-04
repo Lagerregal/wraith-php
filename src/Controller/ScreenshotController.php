@@ -48,6 +48,11 @@ class ScreenshotController implements ControllerInterface
         $serverUrl = 'http://localhost:4444';
         $options = new ChromeOptions();
         $options->addArguments(['headless']);
+        $options->setExperimentalOption('prefs', [
+            'download.prompt_for_download' => true,
+            'download.default_directory' => '/dev/null',
+            'download_restrictions' => 3,
+        ]);
         $desiredCapabilities = DesiredCapabilities::chrome();
         $desiredCapabilities->setCapability(ChromeOptions::CAPABILITY, $options);
         $this->driver = RemoteWebDriver::create($serverUrl, $desiredCapabilities);
@@ -152,6 +157,14 @@ class ScreenshotController implements ControllerInterface
             is_array($this->config->options['exclude_paths']['ends_with'])) {
             foreach ($this->config->options['exclude_paths']['ends_with'] as $fileEnding) {
                 if (substr($relativeUrl, 0 - strlen($fileEnding)) === $fileEnding) {
+                    return true;
+                }
+            }
+        }
+        if (!empty($this->config->options['exclude_paths']['contains']) &&
+            is_array($this->config->options['exclude_paths']['contains'])) {
+            foreach ($this->config->options['exclude_paths']['contains'] as $pathPart) {
+                if (strpos($relativeUrl, $pathPart) !== false) {
                     return true;
                 }
             }

@@ -16,13 +16,16 @@ cookie_banner_button: 'a.hide-cookie-hint'
 # Add new links within the same domain to the paths (optional)
 crawl_domain_for_new_paths: true
 
+# Crawl only urls matching the following criteria
 include_paths:
   starts_with:
     - '/service/'
+
+# Exclude urls matching the following criteria
 exclude_paths:
   ends_with:
     - .png
     - .jpg
     - .pdf
-    - .zip
-    - .ics
+  contains:
+    - '/ignore-me/'

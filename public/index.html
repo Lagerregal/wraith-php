@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Compare Screenshots</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC1YmyruXifcj/KFRWoC561YpHpc5Jtzgvbuzx5VozKpWvQ+4nXhPdFgmx8xqexRcpAglTj9sIBWINXa8x5w==" crossorigin="anonymous" />
+    <style>
+        body {
+            padding: 20px 40px;
+        }
+    </style>
+</head>
+<body>
+<h1>Compare Screenshots</h1>
+<form action="javascript: loadComparison();" id="input-form">
+    <label for="comparison-path-input">Input Comparison Path (e.g. example/2021-02-04_15-02-11):</label>
+    <input type="text" id="comparison-path-input" placeholder="example/2021-02-04_15-02-11" style="width: 300px" /><br />
+    <input type="submit" value="Load comparison"><br />
+</form><br />
+<br />
+<table id="comparison">
+    <thead>
+        <tr>
+            <th>Image 1</th>
+            <th>Image 2</th>
+            <th>Comparison</th>
+            <th>Difference</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+<script>
+    let loadComparison = function() {
+        document.getElementById('input-form').style.display = 'none';
+        let comparePath = document.getElementById('comparison-path-input').value;
+        let configName = comparePath.split('/')[0];
+        let url = '../data/compare/' + comparePath + '/';
+        let resultScript = document.createElement('script');
+        resultScript.setAttribute('src', url + 'result.js');
+        document.head.appendChild(resultScript);
+        resultScript.onload = function () {
+            let tableBody = document.getElementById('comparison').getElementsByTagName('tbody')[0];
+            let elementCount = 0;
+            result['result'].forEach(function (element) {
+                if (element['difference'] !== 0) {
+                    let imagePathPart = '../data/screenshots/' + configName + '/';
+                    elementCount++;
+                    setTimeout(function (){
+                        addComparisonRow(
+                            tableBody,
+                            url,
+                            imagePathPart + result['dirName1'] + '/' + element['fileName'],
+                            'thumbs/1_' + element['fileNameThumbs'],
+                            imagePathPart + result['dirName2'] + '/' + element['fileName'],
+                            'thumbs/2_' + element['fileNameThumbs'],
+                            url + element['fileName'],
+                            'thumbs/c_' + element['fileNameThumbs'],
+                            element['difference'],
+                            element['fileName']
+                        );
+                    }, elementCount * 100);
+                }
+            });
+        }
+    };
+
+    let addComparisonRow = function(tableBody, url, imageLink1, imageThumb1, imageLink2, imageThumb2,
+                                    imageLink3, imageThumb3, difference, fileName) {
+        let newRow = tableBody.insertRow();
+        addImageCell(newRow, url, imageLink1, imageThumb1)
+        addImageCell(newRow, url, imageLink2, imageThumb2)
+        addImageCell(newRow, url, imageLink3, imageThumb3)
+        let cellFactor = newRow.insertCell();
+        cellFactor.innerHTML = difference + '<br />' + fileName;
+    };
+
+    let addImageCell = function(row, url, imageLinkUrl, imageThumbUrl) {
+        let cell = row.insertCell();
+        cell.innerHTML = '<a href="' + imageLinkUrl + '" target="_blank"><img src="' +
+            url + imageThumbUrl + '" loading="lazy" /></a>';
+    };
+</script>
+</body>
+</html>
