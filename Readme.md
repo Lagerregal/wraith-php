@@ -12,9 +12,18 @@ This tool is based on the ideas of [bbc/wraith](https://github.com/bbc/wraith).
 ## Installation
 
 ### Prerequisites
-You need a running PHP version (> 7.4) and [Composer](https://getcomposer.org/).
+System requirements:
+* PHP version (> 7.4) with PHP extensions `imagick` and `json` (see [composer.json](../blob/main/composer.json))
+* [Composer](https://getcomposer.org/)
 
 ### Install sources
+
+**Either** install this package via composer:
+```bash
+composer require different-technology/wraith-php
+```
+
+**Or** clone the code from GitHub:
 ```bash
 git clone git@github.com:different-technology/wraith-php.git
 cd wraith-php
