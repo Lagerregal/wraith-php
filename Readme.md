@@ -13,7 +13,7 @@ This tool is based on the ideas of [bbc/wraith](https://github.com/bbc/wraith).
 
 ### Prerequisites
 System requirements:
-* PHP version (> 7.4) with PHP extensions `imagick` and `json` (see [composer.json](../blob/main/composer.json))
+* PHP version (> 7.4) with PHP extensions `imagick` and `json` (see [composer.json](../main/composer.json))
 * [Composer](https://getcomposer.org/)
 
 ### Install sources
@@ -40,7 +40,7 @@ Place the chromedriver here (optional): `bin/chromedriver`
 
 Configure your website in your own YAML config file in `/configs`.
 
-See example in [/configs/example.yml](../blob/main/configs/example.yml)
+See example in [/configs/example.yml](../main/configs/example.yml)
 
 
 
