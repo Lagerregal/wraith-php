@@ -24,3 +24,5 @@ exclude_paths:
     - .png
     - .jpg
     - .pdf
+    - .zip
+    - .ics

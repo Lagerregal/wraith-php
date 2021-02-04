@@ -21,7 +21,15 @@ class Configuration
         $config->options = Yaml::parseFile($config->baseDirectory . '/configs/' . $name . '.yml');
         $pathsFilePath = $config->getPathsFilePath();
         $config->paths = is_file($pathsFilePath) ? Yaml::parseFile($pathsFilePath) : [];
-        $config->paths = empty($config->paths['paths']) ? ['/'] : $config->paths['paths'];
+        if (!empty($config->paths['paths'])) {
+            $config->paths = $config->paths['paths'];
+        } else {
+            $config->paths = ['/'];
+            if (!empty($config->options['include_paths']['starts_with']) &&
+                is_array($config->options['include_paths']['starts_with'])) {
+                $config->paths = array_merge($config->paths, $config->options['include_paths']['starts_with']);
+            }
+        }
         return $config;
     }
 

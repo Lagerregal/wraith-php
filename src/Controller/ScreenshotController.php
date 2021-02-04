@@ -63,7 +63,7 @@ class ScreenshotController implements ControllerInterface
         }
 
         $fullUrl = $this->config->options['domain'] . $url;
-        $filePath = $this->directory . FileHelper::sanitizeFileName($url) . '_' . $resolutionString . '.png';
+        $filePath = $this->directory . FileHelper::sanitizeFileName($url, 180) . '_' . $resolutionString . '.png';
 
         echo 'Screenshotting (' . $resolutionString . ') ' . $fullUrl . PHP_EOL;
         try {
@@ -148,7 +148,8 @@ class ScreenshotController implements ControllerInterface
     protected function isUrlExcluded(string $relativeUrl): bool
     {
         // check excluded paths first
-        if (is_array($this->config->options['exclude_paths']['ends_with'])) {
+        if (!empty($this->config->options['exclude_paths']['ends_with']) &&
+            is_array($this->config->options['exclude_paths']['ends_with'])) {
             foreach ($this->config->options['exclude_paths']['ends_with'] as $fileEnding) {
                 if (substr($relativeUrl, 0 - strlen($fileEnding)) === $fileEnding) {
                     return true;
@@ -157,8 +158,9 @@ class ScreenshotController implements ControllerInterface
         }
 
         $excluded = false;
-        if (is_array($this->config->options['include_paths']['starts_with'])
-            && count($this->config->options['include_paths']['starts_with']) > 0) {
+        if (!empty($this->config->options['include_paths']['starts_with']) &&
+            is_array($this->config->options['include_paths']['starts_with']) &&
+            count($this->config->options['include_paths']['starts_with']) > 0) {
             $excluded = true;
             foreach ($this->config->options['include_paths']['starts_with'] as $pathStart) {
                 if (substr($relativeUrl, 0, strlen($pathStart)) === $pathStart) {
