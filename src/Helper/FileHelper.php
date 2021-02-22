@@ -5,8 +5,7 @@ namespace WraithPhp\Helper;
 class FileHelper
 {
     /**
-     * Returns a safe filename, for a given platform (OS), by replacing all
-     * dangerous characters with an underscore.
+     * Returns a safe filename, by replacing all dangerous characters with an underscore.
      *
      * @param string $fileName The source filename to be "sanitized"
      * @param int $maxLength The max length of the filename (optional)

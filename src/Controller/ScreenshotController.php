@@ -4,48 +4,112 @@ namespace WraithPhp\Controller;
 
 use Exception;
 use Facebook\WebDriver\Chrome\ChromeOptions;
+use Facebook\WebDriver\Exception\WebDriverCurlException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverBy;
 use Facebook\WebDriver\WebDriverDimension;
 use Facebook\WebDriver\WebDriverExpectedCondition;
 use Facebook\WebDriver\WebDriverPoint;
-use WraithPhp\Configuration;
+use RuntimeException;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use WraithPhp\Helper\FileHelper;
 
-class ScreenshotController implements ControllerInterface
+class ScreenshotController extends AbstractJobController
 {
+    protected static $defaultName = 'screenshot';
     protected string $directory;
     protected RemoteWebDriver $driver;
-    protected Configuration $config;
     protected int $urlCount = 0;
-    protected array $currentResolutionPaths;
 
-    public function exec(Configuration $config): void
+    protected function configure()
     {
-        $this->config = $config;
-        $this->initDriver();
-        $this->directory = $this->config->baseDirectory . '/data/screenshots/' .
-            $this->config->name . '/' . date('Y-m-d_H-i-s') . '/';
+        parent::configure();
+        $this->addArgument('threads', InputArgument::OPTIONAL, 'The amount of parallel workers for this job', 1);
+        $this->setDescription('Take screenshots of your website');
+    }
 
-        foreach ($this->config->options['resolutions'] as $resolutionString) {
-            $this->currentResolutionPaths = $this->config->paths;
-            $resolution = explode('x', $resolutionString);
-            $this->driver->manage()->window()->setSize(
-                new WebDriverDimension($resolution[0], $resolution[1])
-            );
+    public function initialize(InputInterface $input, OutputInterface $output)
+    {
+        parent::initialize($input, $output);
 
-            while($nextUrl = array_shift($this->currentResolutionPaths)) {
-                $this->handleUrl($nextUrl, $resolutionString);
+        // if it's not a join command set directory name
+        if (empty($this->config->options['runtime'])) {
+            $directory = $this->config->baseDirectory . '/data/screenshots/' .
+                $this->config->configName . '/' . date('Y-m-d_H-i-s') . '/';
+            $this->config->options['runtime'] = ['directory' => $directory];
+        }
+    }
+
+    public function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $this->output->writeln([
+            '<info>Start screenshot</info>',
+            '<info>Job ID: ' . $this->jobId . '</info>',
+        ]);
+        $this->initJob();
+        $this->initPathJobs();
+
+        // start threads
+        $threads = (int)$this->input->getArgument('threads');
+        $threads = $threads > 0 ? $threads : 1;
+
+        if ($threads > 1) {
+            $command = 'php app.php join ' . $this->config->configName . ' ' . $this->jobId . ' 1> /dev/null &';
+            for ($i = 1; $i < $threads; $i++) {
+                $freeMemory = 0;
+                $output = '';
+                exec('free -m | awk \'/Mem:/{print $4}\'', $output);
+                if(!empty($output[0])) {
+                    $freeMemory = (int)$output[0];
+                }
+                if ($freeMemory < 500) {
+                    $this->output->writeln('<info>Stopped creating threads: Only ' . $freeMemory . 'MB free memory left</info>');
+                    break;
+                }
+
+                $this->output->writeln('Starting thread ' . $i);
+                exec($command);
+                sleep(2);
             }
+            $this->output->writeln('Starting thread ' . $i);
         }
 
+        $this->continueJob();
+        return Command::SUCCESS;
+    }
+
+    public function continueJob(): void
+    {
+        $this->directory = $this->config->options['runtime']['directory'];
+        $this->initDriver();
+        while($nextUrlJob = $this->getNextJobItem('paths')) {
+            $this->handleUrl($nextUrlJob['url'], $nextUrlJob['resolution']);
+        }
         $this->driver->close();
+    }
+
+    protected function initPathJobs(): void
+    {
+        $pathsToScreenshot = [];
+        foreach ($this->config->options['resolutions'] as $resolutionString) {
+            $knownPaths = $this->config->paths;
+            while($nextUrl = array_shift($knownPaths)) {
+                $pathsToScreenshot[] = [
+                    'resolution' => $resolutionString,
+                    'url' => $nextUrl,
+                ];
+            }
+        }
+        $this->setJobItems('paths', $pathsToScreenshot);
     }
 
     protected function initDriver(): void
     {
-        $serverUrl = 'http://localhost:4444';
+        $serverUrl = $this->config->options['chromedriver']['server_url'] ?? 'http://localhost:4444';
         $options = new ChromeOptions();
         $options->addArguments(['headless']);
         $options->setExperimentalOption('prefs', [
@@ -55,7 +119,27 @@ class ScreenshotController implements ControllerInterface
         ]);
         $desiredCapabilities = DesiredCapabilities::chrome();
         $desiredCapabilities->setCapability(ChromeOptions::CAPABILITY, $options);
-        $this->driver = RemoteWebDriver::create($serverUrl, $desiredCapabilities);
+        try {
+            $this->driver = RemoteWebDriver::create($serverUrl, $desiredCapabilities);
+        } catch (WebDriverCurlException $e) {
+            $autostart = $this->config->options['chromedriver']['autostart'] ?? false;
+            if ($autostart) {
+                $startCommand = $this->config->options['chromedriver']['commands']['start'] ?? 'bin/chromedriver --port=4444';
+                if (substr($startCommand, 0, 1) !== '/') {
+                    $startCommand = $this->config->baseDirectory . '/' . $startCommand;
+                }
+                $this->output->writeln([
+                    'Starting chromedriver...',
+                    $startCommand,
+                    '',
+                ]);
+                exec($startCommand . ' > /dev/null &');
+                sleep(3);
+                $this->driver = RemoteWebDriver::create($serverUrl, $desiredCapabilities);
+            } else {
+                throw new RuntimeException('Could not connect to chromedriver (autostart disabled): ' . $serverUrl);
+            }
+        }
         $this->driver->manage()->window()->setPosition(new WebDriverPoint(0, 0));
         $this->urlCount = 0;
     }
@@ -63,15 +147,19 @@ class ScreenshotController implements ControllerInterface
     protected function handleUrl(string $url, string $resolutionString): void
     {
         if ($this->isUrlExcluded($url)) {
-            echo 'Ignoring url: ' . $url . PHP_EOL;
+            $this->output->writeln('Ignoring url: ' . $url);
             return;
         }
 
         $fullUrl = $this->config->options['domain'] . $url;
         $filePath = $this->directory . FileHelper::sanitizeFileName($url, 180) . '_' . $resolutionString . '.png';
 
-        echo 'Screenshotting (' . $resolutionString . ') ' . $fullUrl . PHP_EOL;
+        $this->output->writeln('Screenshotting (' . $resolutionString . ') ' . $fullUrl);
         try {
+            $resolution = explode('x', $resolutionString);
+            $this->driver->manage()->window()->setSize(
+                new WebDriverDimension($resolution[0], $resolution[1])
+            );
             $this->driver->get($fullUrl);
 
             if (!empty($this->config->options['cookie_banner_button']) && $this->urlCount === 0) {
@@ -85,8 +173,8 @@ class ScreenshotController implements ControllerInterface
             $this->driver->takeScreenshot($filePath);
             $this->urlCount++;
         } catch (Exception $e) {
-            echo PHP_EOL . 'ERROR: Page could not be loaded: ' . $fullUrl . PHP_EOL .
-                'Message: ' . $e->getMessage() . PHP_EOL . PHP_EOL;
+            $this->output->writeln('<error>' . PHP_EOL . 'ERROR: Page could not be loaded: ' . $fullUrl . PHP_EOL .
+                'Message: ' . $e->getMessage() . '</error>' . PHP_EOL);
         }
     }
 
@@ -111,10 +199,18 @@ class ScreenshotController implements ControllerInterface
                         $fragment = isset($parsedFoundUrl['fragment']) ? '#' . $parsedFoundUrl['fragment'] : '';
                         $newFoundUrl = $path.$query.$fragment;
                         if (!in_array($newFoundUrl, $this->config->paths) && !$this->isUrlExcluded($newFoundUrl)) {
-                            echo 'Found new URL: ' . $newFoundUrl . PHP_EOL;
+                            $this->output->writeln('Found new URL: ' . $newFoundUrl);
 
-                            // store new path
-                            $this->currentResolutionPaths[] = $newFoundUrl;
+                            // store new paths
+                            $pathsToScreenshot = [];
+                            foreach ($this->config->options['resolutions'] as $resolutionString) {
+                                $pathsToScreenshot[] = [
+                                    'resolution' => $resolutionString,
+                                    'url' => $newFoundUrl,
+                                ];
+                            }
+                            $this->addJobItems('paths', $pathsToScreenshot);
+
                             $this->config->paths[] = $newFoundUrl;
                             $this->config->storePaths();
                         }
@@ -133,8 +229,8 @@ class ScreenshotController implements ControllerInterface
                 ->until(WebDriverExpectedCondition::elementToBeClickable($button));
             $this->driver->findElement($button)->click();
         } catch (Exception $e) {
-            echo 'WARNING: Element cookie_banner_button not found (' .
-                $this->config->options['cookie_banner_button'] . ') ' . PHP_EOL;
+            $this->output->writeln('<info>WARNING: Element cookie_banner_button not found (' .
+                $this->config->options['cookie_banner_button'] . ')</info>');
         }
     }
 
@@ -146,7 +242,7 @@ class ScreenshotController implements ControllerInterface
             $this->driver->wait(15, 2000)
                 ->until(WebDriverExpectedCondition::visibilityOfAnyElementLocated($images));
         } catch (Exception $e) {
-            echo 'WARNING: Element img not found' . PHP_EOL;
+            $this->output->writeln('<info>WARNING: Element img not found</info>');
         }
     }
 

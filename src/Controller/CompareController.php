@@ -5,29 +5,36 @@ namespace WraithPhp\Controller;
 use Exception;
 use Imagick;
 use ImagickPixel;
-use WraithPhp\Configuration;
+use RuntimeException;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
-class CompareController implements ControllerInterface
+class CompareController extends AbstractController
 {
+    protected static $defaultName = 'compare';
     protected string $directoryScreenshots;
     protected string $directoryComparison;
-    protected Configuration $config;
     protected array $result = [];
 
-    /**
-     * @param Configuration $config
-     * @throws Exception
-     */
-    public function exec(Configuration $config): void
+    protected function configure()
     {
-        $this->config = $config;
-        $this->directoryScreenshots = $this->config->baseDirectory . '/data/screenshots/' . $this->config->name . '/';
-        $this->directoryComparison = $this->config->baseDirectory . '/data/compare/' . $this->config->name . '/' .
+        parent::configure();
+        $this->addArgument('directory1', InputArgument::REQUIRED, 'Directory 1: Base screenshots');
+        $this->addArgument('directory2', InputArgument::REQUIRED, 'Directory 2: Screenshot to be compared with directory 1');
+        $this->setDescription('Compare two screenshot directories');
+    }
+
+    public function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $this->directoryScreenshots = $this->config->baseDirectory . '/data/screenshots/' . $this->config->configName . '/';
+        $this->directoryComparison = $this->config->baseDirectory . '/data/compare/' . $this->config->configName . '/' .
             date('Y-m-d_H-i-s') . '/';
-        $dirName1 = $this->config->arguments[3];
-        $dirName2 = $this->config->arguments[4];
-        $this->validateInput();
-        echo 'Compare ' . $this->config->name . ' "' . $dirName1 . '" with "' . $dirName2 . '"' . PHP_EOL;
+        $this->validateInput($input);
+        $dirName1 = $input->getArgument('directory1');
+        $dirName2 = $input->getArgument('directory2');
+        echo 'Compare ' . $this->config->configName . ' "' . $dirName1 . '" with "' . $dirName2 . '"' . PHP_EOL;
 
         if (!is_dir($this->directoryComparison)) {
             mkdir($this->directoryComparison, 0777, true);
@@ -57,6 +64,7 @@ class CompareController implements ControllerInterface
                     'Message: ' . $e->getMessage() . PHP_EOL . PHP_EOL;
             }
         }
+        return Command::SUCCESS;
     }
 
     /**
@@ -127,17 +135,17 @@ class CompareController implements ControllerInterface
     }
 
     /**
-     * @throws Exception
+     * @param InputInterface $input
      */
-    protected function validateInput(): void
+    protected function validateInput(InputInterface $input): void
     {
-        foreach ([3, 4] as $argKey) {
-            if (empty($this->config->arguments[$argKey])) {
-                throw new Exception('Argument ' . $argKey . ' not given.');
+        foreach (['directory1', 'directory1'] as $argKey) {
+            if (empty($input->getArgument($argKey))) {
+                throw new RuntimeException('Argument ' . $argKey . ' not given.');
             }
-            $directory = $this->directoryScreenshots . $this->config->arguments[$argKey];
+            $directory = $this->directoryScreenshots . $input->getArgument($argKey);
             if (!is_dir($directory)) {
-                throw new Exception('The directory does not exist: ' . $directory);
+                throw new RuntimeException('The directory does not exist: ' . $directory);
             }
         }
     }

@@ -16,6 +16,13 @@ cookie_banner_button: 'a.hide-cookie-hint'
 # Add new links within the same domain to the paths (optional)
 crawl_domain_for_new_paths: true
 
+# Chromedriver settings
+chromedriver:
+  autostart: true
+  commands:
+    start: 'bin/chromedriver --port=4444'
+  server_url: 'http://localhost:4444'
+
 # Crawl only urls matching the following criteria
 include_paths:
   starts_with:
