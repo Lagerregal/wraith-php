@@ -69,16 +69,19 @@ abstract class AbstractJobController extends AbstractController implements JobCo
         $nextJobItem = null;
         $filename = $this->jobDirectory . FileHelper::sanitizeFileName($key) . '.json';
         if (is_file($filename)) {
-            $jobItems = json_decode(file_get_contents($filename), true);
-            if ($jobItems === null) {
-                throw new RuntimeException('Can not json_decode file: ' . $filename);
-            }
-            $nextJobItem = array_shift($jobItems);
-            if ($nextJobItem === null) {
-                unlink($filename);
-            } else {
-                // set job items again without the processed item
-                $this->setJobItems($key, $jobItems);
+            $fileContent = @file_get_contents($filename);
+            if (!empty($fileContent)) {
+                $jobItems = json_decode($fileContent, true);
+                if ($jobItems === null) {
+                    throw new RuntimeException('Can not json_decode file: ' . $filename);
+                }
+                $nextJobItem = array_shift($jobItems);
+                if ($nextJobItem === null) {
+                    unlink($filename);
+                } else {
+                    // set job items again without the processed item
+                    $this->setJobItems($key, $jobItems);
+                }
             }
         }
 
@@ -95,6 +98,8 @@ abstract class AbstractJobController extends AbstractController implements JobCo
      */
     protected function storeJobStatus(string $key, $status, string $format = 'data')
     {
+        $stream = PortLockHelper::lockSystemPort();
+
         switch ($format) {
             case 'json':
                 $status = json_encode($status, JSON_PRETTY_PRINT);
@@ -105,6 +110,8 @@ abstract class AbstractJobController extends AbstractController implements JobCo
         }
         $filename = $this->jobDirectory . FileHelper::sanitizeFileName($key) . '.' . $format;
         file_put_contents($filename, $status);
+
+        PortLockHelper::releaseSystemPort($stream);
     }
 
     protected function generateJobId(): string

@@ -9,6 +9,7 @@ class PortLockHelper
     public static function lockSystemPort(int $fileLockPort = 7600)
     {
         $counter = 0;
+        usleep(50000); // sleep 50 ms
         do {
             $stream = @stream_socket_server(
                 'tcp://0.0.0.0:' . $fileLockPort,

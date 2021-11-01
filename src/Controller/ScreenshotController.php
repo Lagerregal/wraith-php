@@ -186,9 +186,17 @@ class ScreenshotController extends AbstractJobController
             foreach ($links as $link) {
                 $foundUrl = $link->getAttribute('href');
                 $parsedFoundUrl = parse_url($foundUrl);
-                if ( // check host
-                    !empty($parsedFoundUrl['host']) &&
-                    $parsedSourceUrl['host'] === $parsedFoundUrl['host']
+                if ( // check host - this should maybe be configurable?
+                    (   // check if it's a relative link starting with a slash to avoid crawling javascript links
+                        !isset($parsedFoundUrl['host']) &&
+                        !empty($parsedFoundUrl['path']) &&
+                        substr($parsedFoundUrl['path'], 0, 1) === '/'
+                    )
+                    ||
+                    (   // check if it's on the same domain
+                        !empty($parsedFoundUrl['host']) &&
+                        $parsedSourceUrl['host'] === $parsedFoundUrl['host']
+                    )
                 ) {
                     if ( // check port
                         (empty($parsedSourceUrl['port']) && empty($parsedFoundUrl['port'])) ||
